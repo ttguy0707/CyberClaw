@@ -48,7 +48,7 @@ def print_banner():
 
 
 
-    sub_title = f"{WHITE}{BOLD}👾   Welcome to the {PURPLE}{BOLD}CyberClaw{RESET}{WHITE}{BOLD} !  {RESET}"
+    sub_title = f"{WHITE}{BOLD}👾  Welcome to the {PURPLE}{BOLD}CyberClaw{RESET}{WHITE}{BOLD} !  {RESET}"
 
     divider = f"{DIM}{PURPLE}{'━' * 78}{RESET}"
 
