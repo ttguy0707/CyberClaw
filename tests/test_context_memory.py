@@ -2,8 +2,12 @@ import os
 import sys
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
+import sqlite3
+from langgraph.checkpoint.sqlite import SqliteSaver
+
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from CyberClaw.core.config import DB_PATH
 from CyberClaw.core.context import trim_context_messages, AgentState
 from CyberClaw.core.provider import get_provider
 from CyberClaw.core.tools.builtins import BUILTIN_TOOLS
@@ -19,23 +23,40 @@ def main():
         return
 
     print("🚀 启动 CyberClaw 记忆压力测试 (引入 MemorySaver)...\n")
+
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     
-    memory = MemorySaver()
+    memory = SqliteSaver(conn)
     app = create_agent_app(provider_name='aliyun', model_name='glm-5', checkpointer=memory)
     
     session_id = "test_user_lilei"
     config = {"configurable": {"thread_id": session_id}}
 
     test_conversations = [
-        "你好，我叫李雷，我是一名程序员。",
-        "我非常喜欢喝冰美式咖啡。",
-        "你能帮我算一下 25 乘以 48 等于多少吗？",
-        "我平时喜欢用 Python 写代码。",
-        "我周末打算去爬山。",
-        "我的幸运数字是 7。",
-        "现在几点了？",
-        "你还记得我叫什么名字、喜欢喝什么吗？",
-        "我刚才问了什么问题？"
+        # "你好，我叫李雷，我是一名程序员。",
+        # "我非常喜欢喝冰美式咖啡。",
+        # "你能帮我算一下 25 乘以 48 等于多少吗？",
+        # "我平时喜欢用 Python 写代码。",
+        # "我周末打算去爬山。",
+        # "我的幸运数字是 7。",
+        # "现在几点了？",
+        # "你还记得我叫什么名字、喜欢喝什么吗？",
+        # "我刚才问了什么问题？"
+        # "我非常喜欢打篮球"
+        # "这周末天气好，适合做什么运动呢？"
+        # "根据我的用户偏好，我喜欢什么编程语言呢"
+        # "我叫什么名字？"
+        # "下周一我想去游泳"
+        # "我喜欢喝什么?"
+        # 第 1 轮：告知偏好。观察目标 -> 是否触发 update_user_profile 工具调用？
+        # "你好，我是王大锤。我是一名算法工程师，平时写代码卡壳的时候，我最喜欢喝一罐冰镇的无糖可乐来寻找灵感。你可以叫我锤哥。",
+        
+        # # 第 2 轮：闲聊干扰。消耗短期注意力。
+        # "现在帮我写一个极简的 Python 函数：计算斐波那契数列的第 n 项。",
+        
+        # # 第 3 轮：终极测试！观察目标 -> 它是否能【瞬间】回答出可乐，且【绝对不】产生任何工具调用？
+        # "代码写得不错。我现在遇到个大 Bug，卡了两个小时了。根据我的习惯，你建议我现在干点什么来回回血？"
+        "我转行了，现在在做agent开发工程师"
     ]
 
     for i, user_input in enumerate(test_conversations, 1):
@@ -63,7 +84,7 @@ def main():
 
     print("\n✅ 测试完成！正在通知后台日志线程安全退出...")
     audit_logger.shutdown()
-    print("🎯 请去项目根目录下的 logs/ 文件夹查看 JSONL 吧！")
+    conn.close()
 
 if __name__ == "__main__":
     main()

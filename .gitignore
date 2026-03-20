@@ -16,3 +16,8 @@ logs/
 sessions/
 *.jsonl
 *.log
+
+workspace/state.sqlite3
+*.sqlite3
+
+workspace/memory/*.md

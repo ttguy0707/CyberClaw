@@ -1,5 +1,28 @@
 from datetime import datetime
 from .base import cyberclaw_tool, CyberClawBaseTool
+import os
+from ..config import MEMORY_DIR
+
+
+PROFILE_PATH = os.path.join(MEMORY_DIR, "user_profile.md")
+
+
+@cyberclaw_tool
+def save_user_profile(new_content: str) -> str:
+    """
+    更新用户的全局显性记忆档案。
+    当你发现用户的偏好发生改变，或者有新的重要事实需要记录时：
+    1.请先调用 read_user_profile 获取当前的完整档案。
+    2.在你的上下文中，将新信息融入档案，并删去冲突或过时的旧信息。
+    3.将修改后的一整篇完整 Markdown 文本作为 new_content 参数传入此工具。
+    注意：此操作将完全覆盖旧文件！请确保传入的是完整的最新档案。
+    """
+    os.makedirs(MEMORY_DIR, exist_ok=True)
+    with open(PROFILE_PATH, "w", encoding="utf-8") as f:
+        f.write(new_content)
+
+    return "记忆档案已成功覆写更新。新的人设画像已生效。"
+
 
 @cyberclaw_tool
 def get_current_time() -> str:
@@ -28,4 +51,4 @@ def calculator(expression: str) -> str:
         return f"计算出错，请检查表达式格式。错误信息: {str(e)}"
 
 
-BUILTIN_TOOLS = [get_current_time, calculator]
+BUILTIN_TOOLS = [get_current_time, calculator, save_user_profile]
