@@ -2,6 +2,12 @@ from datetime import datetime
 from .base import cyberclaw_tool, CyberClawBaseTool
 import os
 from ..config import MEMORY_DIR
+from .sandbox_tools import (
+    list_office_files,
+    read_office_file,
+    write_office_file,
+    execute_office_shell
+)
 
 
 PROFILE_PATH = os.path.join(MEMORY_DIR, "user_profile.md")
@@ -51,4 +57,13 @@ def calculator(expression: str) -> str:
         return f"计算出错，请检查表达式格式。错误信息: {str(e)}"
 
 
-BUILTIN_TOOLS = [get_current_time, calculator, save_user_profile]
+
+BUILTIN_TOOLS = [
+    get_current_time,
+    calculator,
+    save_user_profile,
+    list_office_files,
+    read_office_file,
+    write_office_file,
+    execute_office_shell
+]

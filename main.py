@@ -148,16 +148,14 @@ def main():
                 print("\n \033[38;5;141m✦ 记忆已固化，CyberClaw 进入休眠。\033[0m")
                 break
             
-            print() # 留个空行
+            print()
             inputs = {"messages": [HumanMessage(content=user_input)]}
             
-            # 启动加载特效！
             spinner = CyberSpinner("CyberClaw正在思考中...")
             spinner.start()
             
             is_first_token = True
             
-            # 🌟 关键修改：使用 stream_mode="messages" 拦截最细粒度的 Token 流
             for msg, metadata in app.stream(inputs, config=config, stream_mode="messages"):
                 
                 # 情况 A：如果消息来自大模型 (Agent)
