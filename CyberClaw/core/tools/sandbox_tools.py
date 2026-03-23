@@ -116,13 +116,11 @@ def execute_office_shell(command: str) -> str:
        如果你想在子目录执行命令，请使用“命令链”（如 `cd skills && npm install`）或者“直接使用相对路径”（如 `python skills/test.py`）。
     """
     try:
-        # 简单粗暴地拦截常见的跳出目录指令
         dangerous_patterns = [r"cd\s+\.\.", r"cd\s+/", r"cd\s+~", r"\.\."]
         for pattern in dangerous_patterns:
             if re.search(pattern, command):
                 return "❌ 权限拒绝：检测到危险的目录跳转指令。你被禁止离开 office 工位！"
 
-        # 执行命令
         result = subprocess.run(
             command,
             shell=True,
@@ -139,7 +137,6 @@ def execute_office_shell(command: str) -> str:
         stdout = result.stdout.strip()
         stderr = result.stderr.strip()
         
-        # 针对挂起导致的超时或报错，给予大模型明确的 Debug 提示
         if result.returncode != 0 and ("prompt" in stderr.lower() or "y/n" in stdout.lower()):
             output += "\n💡 系统提示：命令可能由于交互式等待而失败。请重试并务必添加 -y 类的免确认参数！"
         
