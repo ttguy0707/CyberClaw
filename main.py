@@ -6,7 +6,6 @@ from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
 import threading
 
-# 引入我们写好的核心大脑和配置
 from CyberClaw.core.agent import create_agent_app
 from CyberClaw.core.config import DB_PATH
 
@@ -59,7 +58,6 @@ def clear_screen():
 
 
 def type_line(text: str, delay: float = 0.008):
-    """轻微打字机效果"""
     for ch in text:
         print(ch, end='', flush=True)
         time.sleep(delay)
@@ -131,14 +129,12 @@ def print_banner():
 def main():
     print_banner()
 
-    # 1. 唤醒 SQLite 物理记忆
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     memory = SqliteSaver(conn)
     app = create_agent_app(provider_name='aliyun', model_name='glm-5', checkpointer=memory)
     
     config = {"configurable": {"thread_id": "local_geek_master"}}
 
-    # 2. 核心交互循环
     while True:
         try:
             user_input = input(" \033[38;5;51m❯\033[0m \033[38;5;250m你\033[0m > ").strip()
@@ -156,19 +152,19 @@ def main():
             
             is_first_token = True
             
-            agent_was_speaking = False  # 🌟 新增：追踪大模型是不是刚说完话，用来控制换行
+            agent_was_speaking = False
             
             for msg, metadata in app.stream(inputs, config=config, stream_mode="messages"):
                 
-                # 情况 A：如果消息来自大模型 (Agent)
+
                 if metadata.get("langgraph_node") == "agent":
                     
-                    # 1. 拦截工具调用的意图
+  
                     if getattr(msg, "tool_call_chunks", None):
                         name = msg.tool_call_chunks[0].get("name")
                         if name:
                             spinner.stop()
-                            # 🌟 修复 UI 瑕疵：如果它刚说了废话，强制换行，保持队形整洁
+                  
                             if agent_was_speaking:
                                 print() 
                                 agent_was_speaking = False
@@ -178,9 +174,9 @@ def main():
                             spinner.start()
                         continue
                         
-                    # 2. 拦截正常的文本 Token 并打字机输出
+       
                     if msg.content:
-                        # 🌟 终极修复：只要它开始说话，不管三七二十一，立刻干掉转圈圈！
+                  
                         if spinner.is_running:
                             spinner.stop()
                             
@@ -188,19 +184,19 @@ def main():
                             print(f" \033[38;5;141m👾 CyberClaw\033[0m > \033[38;5;250m", end="")
                             is_first_token = False
                         
-                        # end="" 防止换行, flush=True 强制立刻推送到屏幕
+                   
                         print(msg.content, end="", flush=True)
-                        agent_was_speaking = True # 标记它正在说话
+                        agent_was_speaking = True 
 
-                # 情况 B：如果消息来自工具执行结果
+             
                 elif isinstance(msg, ToolMessage):
                     spinner.stop()
-                    # 这里也可以加个 agent_was_speaking 判断，但通常工具前都有“唤醒”提示，所以这里自带换行了
+            
                     print(f" \033[38;5;250m[ 工具执行完毕 ]\033[0m")            
                     spinner.message = "正在整合推理结果..."
                     spinner.start()
             
-            # 对话结束收尾
+       
             if agent_was_speaking:
                 print("\033[0m") 
             else:
