@@ -8,6 +8,7 @@ from .provider import get_provider
 from .tools.builtins import BUILTIN_TOOLS
 from .logger import audit_logger
 from .config import MEMORY_DIR
+from .skill_loader import load_dynamic_skills
 from langchain_core.runnables import RunnableConfig
 import os
 
@@ -17,8 +18,12 @@ def create_agent_app(
     tools: Optional[List[BaseTool]] = None,
     checkpointer = None
 ):
- 
-    actual_tools = tools if tools is not None else BUILTIN_TOOLS
+    if tools is None:
+        dynamic_tools = load_dynamic_skills()
+        actual_tools = BUILTIN_TOOLS + dynamic_tools
+    else:
+        actual_tools = tools
+    
     
     tool_node = ToolNode(actual_tools)
 
@@ -32,17 +37,6 @@ def create_agent_app(
         thread_id = config.get("configurable", {}).get("thread_id", "system_default")
 
         raw_messages = state["messages"]
-
-        # 记录工具调用结果
-        # if raw_messages:
-        #     last_msg = raw_messages[-1]
-        #     if last_msg.type == "tool":
-        #         audit_logger.log_event(
-        #             thread_id=thread_id,
-        #             event="tool_result",
-        #             tool=last_msg.name,
-        #             result_summary=last_msg.content[:200]
-        #         )
 
         if raw_messages:
             recent_tool_msgs = []
