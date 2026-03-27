@@ -7,71 +7,72 @@ from dotenv import load_dotenv
 '''
 load_dotenv()
 
+# 各大厂商官方的 OpenAI 兼容接口地址 (当用户未配置 BASE_URL 时作为兜底)
+COMPATIBLE_BASE_URLS = {
+    "aliyun": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "dashscope": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "zhipu": "https://open.bigmodel.cn/api/paas/v4"
+}
+
 def get_provider(
     provider_name: str = "openai", 
     model_name: str = "gpt-4o-mini", 
     temperature: float = 0.0,
-    base_url: str | None = None,  # 【新增】允许外部传入 base_url
-    api_key: str | None = None,   # 【新增】允许外部传入 api_key (可选)
+    base_url: str | None = None,  # 允许外部传入
+    api_key: str | None = None,   # 允许外部传入
     **kwargs: Any
 ) -> BaseChatModel:
     """
-    模型适配器工厂。
+    模型适配器工厂 (支持万物归一的 OpenAI 协议)
     """
     provider_name = provider_name.lower()
     
-    # 优先使用传入的 key，否则从环境变量获取
-    current_api_key = api_key or os.environ.get("OPENAI_API_KEY")
-
-    if provider_name == "openai":
- 
+    if provider_name in ["openai", "aliyun", "dashscope", "zhipu", "tencent"]:
         from langchain_openai import ChatOpenAI
         
+        current_api_key = api_key or os.environ.get("OPENAI_API_KEY")
         if not current_api_key:
-            raise ValueError("未找到 OPENAI_API_KEY 环境变量！")
+            raise ValueError(f"未找到 API Key！请确保 .env 中配置了 OPENAI_API_KEY")
             
+
+        final_base_url = base_url or os.environ.get("OPENAI_API_BASE")
+        if not final_base_url:
+            final_base_url = COMPATIBLE_BASE_URLS.get(provider_name) 
+
         return ChatOpenAI(
             model=model_name, 
             temperature=temperature,
             api_key=current_api_key,
-            base_url=base_url,  # 如果为 None，则默认连接 api.openai.com
+            base_url=final_base_url,
             **kwargs
         )
 
-    elif provider_name == "aliyun" or provider_name == "dashscope":
-
-        from langchain_openai import ChatOpenAI
-        
-        if not current_api_key:
-            raise ValueError("未找到 API Key (请确保 .env 中配置了 OPENAI_API_KEY)")
-            
-        return ChatOpenAI(
-            model=model_name, 
-            temperature=temperature,
-            api_key=current_api_key,
-            base_url="https://coding.dashscope.aliyuncs.com/v1", 
-            **kwargs
-        )
-        
     elif provider_name == "anthropic":
         from langchain_anthropic import ChatAnthropic
-        key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-        if not key:
+        
+        current_api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        if not current_api_key:
             raise ValueError("未找到 ANTHROPIC_API_KEY 环境变量！")
             
+        final_base_url = base_url or os.environ.get("ANTHROPIC_BASE_URL")
+
         return ChatAnthropic(
             model_name=model_name, 
             temperature=temperature, 
-            anthropic_api_key=key,
+            api_key=current_api_key,
+            base_url=final_base_url,
             **kwargs
         )
         
     elif provider_name == "ollama":
         from langchain_community.chat_models import ChatOllama
+        
+        final_base_url = base_url or os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        
         return ChatOllama(
             model=model_name, 
             temperature=temperature, 
-            base_url=kwargs.get("base_url", "http://localhost:11434"),
+            base_url=final_base_url,
             **kwargs
         )
         

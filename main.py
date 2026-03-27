@@ -129,9 +129,17 @@ def print_banner():
 def main():
     print_banner()
 
+    PURPLE = '\033[38;5;141m'
+    DIM = '\033[2m'
+    RESET = '\033[0m'
+
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     memory = SqliteSaver(conn)
-    app = create_agent_app(provider_name='aliyun', model_name='glm-5', checkpointer=memory)
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+    current_provider = os.getenv("DEFAULT_PROVIDER", "aliyun")
+    current_model = os.getenv("DEFAULT_MODEL", "glm-5")
+    app = create_agent_app(provider_name=current_provider, model_name=current_model, checkpointer=memory)
     
     config = {"configurable": {"thread_id": "local_geek_master"}}
 
@@ -203,9 +211,6 @@ def main():
                 print("\033[0m", end="")
             spinner.stop()
 
-            PURPLE = '\033[38;5;141m'
-            DIM = '\033[2m'
-            RESET = '\033[0m'
             print(f"\n {DIM}{PURPLE}{'━' * 78}{RESET}\n")
 
         except KeyboardInterrupt:

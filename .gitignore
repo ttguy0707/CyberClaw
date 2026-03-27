@@ -24,3 +24,5 @@ workspace/state.sqlite3
 
 workspace/memory/*.md
 workspace/office
+
+*.egg-info/
