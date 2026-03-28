@@ -48,7 +48,7 @@ def config_wizard():
     ).ask()
 
     if not provider_raw:
-        console.print("[dim #8d52ff]✦ 录入中断，CyberClaw 配置已取消。[/dim #8d52ff]")
+        console.print("[dim #8d52ff]✦   录入中断，CyberClaw 配置已取消。[/dim #8d52ff]")
         return
 
     provider = provider_raw.split(" ")[0].strip()
@@ -60,7 +60,7 @@ def config_wizard():
     ).ask()
 
     if model_name is None:
-        console.print("[dim #8d52ff]✦ 录入中断，CyberClaw 配置已取消。[/dim #8d52ff]")
+        console.print("[dim #8d52ff]✦   录入中断，CyberClaw 配置已取消。[/dim #8d52ff]")
         return
 
     api_key = ""
@@ -77,7 +77,7 @@ def config_wizard():
         ).ask()
 
         if api_key is None:
-            console.print("[dim #8d52ff]✦ 录入中断，CyberClaw 配置已取消。[/dim #8d52ff]")
+            console.print("[dim #8d52ff]✦   录入中断，CyberClaw 配置已取消。[/dim #8d52ff]")
             return
 
     base_url = ""

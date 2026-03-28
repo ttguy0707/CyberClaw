@@ -100,7 +100,7 @@ def main():
         for line in tail_f(LOG_FILE):
             render_event(line)
     except KeyboardInterrupt:
-        console.print("\n[warning]✦ 监控网络已断开。[/warning]")
+        console.print("\n[warning]✦   监控网络已断开。[/warning]")
 
 if __name__ == "__main__":
     main()
