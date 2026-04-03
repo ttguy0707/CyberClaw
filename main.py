@@ -1,19 +1,24 @@
 import os
 import sys
 import time
-import sqlite3
+import asyncio
+import random
 from langchain_core.messages import HumanMessage, ToolMessage
-from langgraph.checkpoint.sqlite import SqliteSaver
-import threading
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+from prompt_toolkit import PromptSession, print_formatted_text
+from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit.formatted_text import ANSI
+from prompt_toolkit.styles import Style
 
 from CyberClaw.core.agent import create_agent_app
 from CyberClaw.core.config import DB_PATH
+from CyberClaw.core.bus import task_queue
 
-class CyberSpinner:
+class AsyncCyberSpinner:
     def __init__(self, message="正在接入核心推理引擎..."):
         self.message = message
-        self.is_running = False
-        self.thread = None
+        self.task = None
         self.start_time = 0
         self.frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
         self.CYAN = '\033[38;5;51m'
@@ -21,36 +26,42 @@ class CyberSpinner:
         self.PURPLE = '\033[38;5;141m'
         self.RESET = '\033[0m'
 
-    def spin(self):
-        i = 0
-        while self.is_running:
-            frame = self.frames[i % len(self.frames)]
-            elapsed_time = time.time() - self.start_time
-            
-            sys.stdout.write(
-                f"\r\033[K {self.CYAN}{frame}{self.RESET} "
-                f"{self.SILVER}{self.message}{self.RESET} "
-                f"{self.PURPLE}[{elapsed_time:.1f}s]{self.RESET}"
-            )
+    async def spin(self):
+        try:
+            i = 0
+            while True:
+                frame = self.frames[i % len(self.frames)]
+                elapsed_time = time.time() - self.start_time
+                
+                sys.stdout.write(
+                    f"\r\033[K {self.CYAN}{frame}{self.RESET} "
+                    f"{self.SILVER}{self.message}{self.RESET} "
+                    f"{self.PURPLE}[{elapsed_time:.1f}s]{self.RESET}"
+                )
+                sys.stdout.flush()
+                await asyncio.sleep(0.08)
+                i += 1
+        except asyncio.CancelledError:
+            sys.stdout.write("\r\033[K")
             sys.stdout.flush()
-            time.sleep(0.08)
-            i += 1
-            
-        sys.stdout.write("\r\033[K")
-        sys.stdout.flush()
 
     def start(self):
-        if not self.is_running:
-            self.is_running = True
+        if self.task is None:
             self.start_time = time.time()
-            self.thread = threading.Thread(target=self.spin)
-            self.thread.start()
+            self.task = asyncio.create_task(self.spin())
 
-    def stop(self):
-        self.is_running = False
-        if self.thread:
-            self.thread.join()
-            self.thread = None
+    async def stop(self):
+        if self.task:
+            self.task.cancel()
+            try:
+                await self.task
+            except asyncio.CancelledError:
+                pass
+            self.task = None
+
+    @property
+    def is_running(self):
+        return self.task is not None
 
 
 def clear_screen():
@@ -64,20 +75,16 @@ def type_line(text: str, delay: float = 0.008):
     print()
 
 
-
-
-
 def print_banner():
     clear_screen()
 
-    CYAN = '\033[38;5;51m'         # 电光青
-    PURPLE = '\033[38;5;141m'      # 霓虹紫
-    SILVER = '\033[38;5;250m'      # 冷银灰
+    CYAN = '\033[38;5;51m'
+    PURPLE = '\033[38;5;141m'
+    SILVER = '\033[38;5;250m'
     DIM = '\033[2m'
     BOLD = '\033[1m'
     RESET = '\033[0m'
     WHITE = '\033[37m'
-
 
     logo = f"""{CYAN}{BOLD}
  ██████╗██╗   ██╗██████╗ ███████╗██████╗
@@ -95,10 +102,7 @@ def print_banner():
  ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝
 {RESET}"""
 
-
-
     sub_title = f"{WHITE}{BOLD}👾  Welcome to the {PURPLE}{BOLD}CyberClaw{RESET}{WHITE}{BOLD} !  {RESET}"
-
     divider = f"{DIM}{PURPLE}{'━' * 78}{RESET}"
 
     meta = f"""
@@ -119,106 +123,180 @@ def print_banner():
     print(sub_title)
     print()
     time.sleep(0.12)
-
-    time.sleep(0.12)
-
     print(meta)
     type_line(tip, delay=0.004)
 
 
-def main():
+def cprint(text="", end="\n"):
+    print_formatted_text(ANSI(str(text)), end=end)
+
+
+async def async_main():
     print_banner()
 
-    PURPLE = '\033[38;5;141m'
-    DIM = '\033[2m'
-    RESET = '\033[0m'
-
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    memory = SqliteSaver(conn)
+    # 🌟 UI 全局设置：加宽视口，更舒展大气！
+    UI_WIDTH = 100  # 🚀 从 64 加长到了 100，这是极客审美的黄金比例
+    DIM_PURPLE_CODE = "\033[2m\033[38;5;141m"
+    PURPLE_LINE = f"{DIM_PURPLE_CODE}{'━' * UI_WIDTH}\033[0m"
+    
     from dotenv import load_dotenv
     load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+    
     current_provider = os.getenv("DEFAULT_PROVIDER", "aliyun")
     current_model = os.getenv("DEFAULT_MODEL", "glm-5")
-    app = create_agent_app(provider_name=current_provider, model_name=current_model, checkpointer=memory)
-    
-    config = {"configurable": {"thread_id": "local_geek_master"}}
 
-    while True:
-        try:
-            user_input = input(" \033[38;5;51m❯\033[0m \033[38;5;250m你\033[0m > ").strip()
-            if not user_input:
-                continue
-            if user_input.lower() in ["/exit", "/quit"]:
-                print("\n \033[38;5;141m✦ 记忆已固化，CyberClaw 进入休眠。\033[0m")
-                break
-            
-            print()
-            inputs = {"messages": [HumanMessage(content=user_input)]}
-            
-            spinner = CyberSpinner("CyberClaw正在思考中...")
-            spinner.start()
-            
-            is_first_token = True
-            
-            agent_was_speaking = False
-            
-            for msg, metadata in app.stream(inputs, config=config, stream_mode="messages"):
-                
+    async with AsyncSqliteSaver.from_conn_string(DB_PATH) as memory:
+        app = create_agent_app(provider_name=current_provider, model_name=current_model, checkpointer=memory)
+        config = {"configurable": {"thread_id": "local_geek_master"}}
 
-                if metadata.get("langgraph_node") == "agent":
-                    
-  
-                    if getattr(msg, "tool_call_chunks", None):
-                        name = msg.tool_call_chunks[0].get("name")
-                        if name:
-                            spinner.stop()
-                  
-                            if agent_was_speaking:
-                                print() 
-                                agent_was_speaking = False
-                                
-                            print(f" \033[38;5;51m[ 唤醒内置工具 : {name} ]\033[0m")
-                            spinner.message = "等待环境反馈..."
-                            spinner.start()
-                        continue
-                        
-       
-                    if msg.content:
-                  
-                        if spinner.is_running:
-                            spinner.stop()
-                            
-                        if is_first_token:
-                            print(f" \033[38;5;141m👾 CyberClaw\033[0m > \033[38;5;250m", end="")
-                            is_first_token = False
-                        
-                   
-                        print(msg.content, end="", flush=True)
-                        agent_was_speaking = True 
+        class SpinnerState:
+            action_words = [
+                "Thinking...",              
+                "Working...",               
+                "Beep boop...",             
+                "Eating bugs...",           
+                "Charging battery...",      
+                "Brewing coffee...",        
+                "Blinking lights...",       
+                "Polishing pixels...",      
+                "Scanning matrix...",       
+                "Warming up circuits...",   
+                "Syncing data...",          
+                "Pinging server..."         
+            ]
+            current_words = [] 
+            is_spinning = False
+            start_time = 0
+            frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+            is_tool_calling = False 
+            tool_msg = ""           
 
-             
-                elif isinstance(msg, ToolMessage):
-                    spinner.stop()
+        spinner = SpinnerState()
+
+        def get_bottom_toolbar():
+            if not spinner.is_spinning:
+                return ANSI(f"{PURPLE_LINE}\n ") 
             
-                    print(f" \033[38;5;250m[ 工具执行完毕 ]\033[0m")            
-                    spinner.message = "正在整合推理结果..."
-                    spinner.start()
-            
-       
-            if agent_was_speaking:
-                print("\033[0m") 
+            elapsed = time.time() - spinner.start_time
+            if spinner.is_tool_calling:
+                display_msg = spinner.tool_msg
             else:
-                print("\033[0m", end="")
-            spinner.stop()
+                idx_word = int(elapsed) % len(spinner.current_words)
+                display_msg = f"👾 {spinner.current_words[idx_word]}"
 
-            print(f"\n {DIM}{PURPLE}{'━' * 78}{RESET}\n")
-
-        except KeyboardInterrupt:
-            print(f"\n {DIM}{PURPLE}{'━' * 78}{RESET}")
-            print("\n \033[38;5;141m✦   强制中断，CyberClaw 进入休眠。\033[0m")
-            break
+            idx_frame = int(elapsed * 12) % len(spinner.frames)
+            frame = spinner.frames[idx_frame]
             
-    conn.close()
+            spinner_text = f" \033[38;5;51m{frame}\033[0m \033[38;5;250m{display_msg}\033[0m \033[38;5;141m[{elapsed:.1f}s]\033[0m"
+            return ANSI(f"{PURPLE_LINE}\n{spinner_text}")
+
+        prompt_message = ANSI(f"\n{PURPLE_LINE}\n \033[38;5;51m❯\033[0m  ")
+
+        # ---------------------------------------------------------
+        # 🌟 任务 A：右脑 (消费者)
+        # ---------------------------------------------------------
+        async def agent_worker():
+            while True:
+                user_input = await task_queue.get()
+                if user_input.lower() in ["/exit", "/quit"]:
+                    task_queue.task_done()
+                    break
+                
+                spinner.current_words = spinner.action_words.copy()
+                random.shuffle(spinner.current_words)
+                
+                spinner.start_time = time.time()
+                spinner.is_spinning = True
+                spinner.is_tool_calling = False
+                
+                inputs = {"messages": [HumanMessage(content=user_input)]}
+                try:
+                    async for event in app.astream(inputs, config=config, stream_mode="updates"):
+                        for node_name, node_data in event.items():
+                            if node_name == "agent":
+                                last_msg = node_data["messages"][-1]
+                                
+                                if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+                                    for tc in last_msg.tool_calls:
+                                        spinner.is_tool_calling = True
+                                        spinner.tool_msg = f"唤醒内置工具 : {tc['name']}..."
+                                        cprint(f" \033[38;5;51m[ 唤醒内置工具 : {tc['name']} ]\033[0m")
+                                        
+                                elif last_msg.content:
+                                    spinner.is_spinning = False
+                                    cprint(f" \033[38;5;141m❯\033[0m \033[38;5;250m{last_msg.content.strip()}\033[0m")
+                                    
+                            elif node_name != "agent": 
+                                spinner.is_tool_calling = False 
+                                
+                except Exception as e:
+                    spinner.is_spinning = False
+                    cprint(f" \033[31m[ ⚠️ 引擎异常 : {e} ]\033[0m")
+
+                spinner.is_spinning = False
+                cprint() 
+                task_queue.task_done()
+
+        # ---------------------------------------------------------
+        # 🌟 任务 B：左脑 (生产者) 
+        # ---------------------------------------------------------
+        async def user_input_loop():
+            custom_style = Style.from_dict({
+                'bottom-toolbar': 'bg:default fg:default noreverse',
+                '': 'bg:#1c1c1c', 
+            })
+            
+            session = PromptSession(
+                bottom_toolbar=get_bottom_toolbar,
+                style=custom_style,
+                erase_when_done=True  
+            )
+            
+            async def redraw_timer():
+                while True:
+                    if spinner.is_spinning:
+                        session.app.invalidate()
+                    await asyncio.sleep(0.08)
+                    
+            redraw_task = asyncio.create_task(redraw_timer())
+            
+            while True:
+                try:
+                    with patch_stdout():
+                        user_input = await session.prompt_async(prompt_message)
+
+                    user_input = user_input.strip()
+                    if not user_input:
+                        continue
+                    
+                    # 🌟 核心改进：为气泡文字增加一条长长的空格“小尾巴”
+                    # 这样气泡就有了一个很好看的初始长度，而且由于没有使用全铺满代码，绝不会导致崩溃
+                    padded_bubble = f"❯ {user_input} "  
+                    
+                    cprint(f" \033[48;2;38;38;38m\033[38;5;255m{padded_bubble}\033[0m\n")
+                    
+                    await task_queue.put(user_input)
+                    if user_input.lower() in ["/exit", "/quit"]:
+                        cprint("\033[38;5;141m✦ 记忆已固化，CyberClaw 进入休眠。\033[0m")
+                        break
+                        
+                except (KeyboardInterrupt, EOFError):
+                    cprint("\n\033[38;5;141m✦ 强制中断，CyberClaw 进入休眠。\033[0m")
+                    await task_queue.put("/exit")
+                    break
+
+            redraw_task.cancel() 
+
+        # ---------------------------------------------------------
+        # 🌟 启动！
+        # ---------------------------------------------------------
+        worker = asyncio.create_task(agent_worker())
+        await user_input_loop()
+        await task_queue.join()
+        worker.cancel()
+
+def main():
+    asyncio.run(async_main())
 
 if __name__ == "__main__":
     main()

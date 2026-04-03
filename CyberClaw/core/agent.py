@@ -11,6 +11,8 @@ from .config import MEMORY_DIR
 from .skill_loader import load_dynamic_skills
 from langchain_core.runnables import RunnableConfig
 import os
+from prompt_toolkit import print_formatted_text
+from prompt_toolkit.formatted_text import ANSI
 
 def create_agent_app(
     provider_name: str = "openai",
@@ -59,8 +61,7 @@ def create_agent_app(
 
         if discarded_msgs:
             import sys
-            sys.stdout.write("\r\033[K \033[38;5;141m[ ⚙️   正在更新上下文记忆... ]\033[0m\n")
-            sys.stdout.flush()
+            print_formatted_text(ANSI("\033[K \033[38;5;141m[ ⚙️ 正在更新上下文记忆... ]\033[0m"))
             discarded_text = "\n".join([f"{m.type}: {m.content}" for m in discarded_msgs if m.content])
         
             summary_prompt = (
