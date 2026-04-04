@@ -8,7 +8,7 @@ from rich.status import Status
 from dotenv import set_key, load_dotenv, unset_key
 import sys
 
-from CyberClaw.core.provider import get_provider
+from cyberclaw.core.provider import get_provider
 from langchain_core.messages import HumanMessage
 
 ENTRY_DIR = os.path.dirname(os.path.abspath(__file__))

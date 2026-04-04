@@ -7,14 +7,14 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from CyberClaw.core.config import DB_PATH
-from CyberClaw.core.context import trim_context_messages, AgentState
-from CyberClaw.core.provider import get_provider
-from CyberClaw.core.tools.builtins import BUILTIN_TOOLS
-from CyberClaw.core.agent import create_agent_app
+from cyberclaw.core.config import DB_PATH
+from cyberclaw.core.context import trim_context_messages, AgentState
+from cyberclaw.core.provider import get_provider
+from cyberclaw.core.tools.builtins import BUILTIN_TOOLS
+from cyberclaw.core.agent import create_agent_app
 
 from langgraph.checkpoint.memory import MemorySaver
-from CyberClaw.core.logger import audit_logger
+from cyberclaw.core.logger import audit_logger
 
 def main():
     load_dotenv()

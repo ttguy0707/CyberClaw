@@ -1,7 +1,7 @@
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from CyberClaw.core.context import trim_context_messages
+from cyberclaw.core.context import trim_context_messages
 from typing import List
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, ToolMessage, AIMessage
 

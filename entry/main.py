@@ -12,9 +12,9 @@ from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.styles import Style
 from prompt_toolkit.application import get_app
 
-from CyberClaw.core.agent import create_agent_app
-from CyberClaw.core.config import DB_PATH
-from CyberClaw.core.bus import task_queue
+from cyberclaw.core.agent import create_agent_app
+from cyberclaw.core.config import DB_PATH
+from cyberclaw.core.bus import task_queue
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
