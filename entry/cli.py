@@ -11,7 +11,9 @@ import sys
 from CyberClaw.core.provider import get_provider
 from langchain_core.messages import HumanMessage
 
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+ENTRY_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(ENTRY_DIR) 
+
 os.chdir(PROJECT_ROOT)
 
 if PROJECT_ROOT not in sys.path:
@@ -30,13 +32,14 @@ cyber_style = questionary.Style([
     ('instruction', 'fg:#808080 dim'),  
 ])
 
-ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+ENV_PATH = os.path.join(PROJECT_ROOT, ".env")
 
 @app.command("config")
 def config_wizard():
+    console.clear()
     console.print(Panel(
-        "👾  Welcome to [bold #8d52ff]CyberClaw[/bold #8d52ff]...\n[dim]请完成模型配置，我们将把密钥安全固化在本地。[/dim]", 
-        title="[bold #8d52ff]🛰️ CyberClaw Config[/bold #8d52ff]", 
+        "👾 Welcome to [bold #8d52ff]CyberClaw[/bold #8d52ff]...\n☁️[dim] 请完成模型配置，我们将把密钥安全固化在本地。[/dim]", 
+        title="[bold white]✦  CyberClaw Config[/bold white]", 
         border_style="#8d52ff"
     ))
     
@@ -181,14 +184,14 @@ def run_agent():
                 _show_boot_error()
                 raise typer.Exit()
         
-    import main as cyberclaw_main
+    import entry.main as cyberclaw_main
     cyberclaw_main.main()
 
 @app.command("monitor")
 def run_monitor():    
         
     try:
-        import monitor as cyberclaw_monitor
+        import entry.monitor as cyberclaw_monitor
         cyberclaw_monitor.main()
     except ImportError as e:
         console.print(f"[bold red]启动失败：找不到监视器模块！[/bold red]\n[dim]请确保 monitor.py 和 cli.py 在同一目录下。\n报错信息: {e}[/dim]")

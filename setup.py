@@ -14,7 +14,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "cyberclaw=cli:main",
+            "cyberclaw=entry.cli:main",
         ],
     },
 )

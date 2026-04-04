@@ -22,12 +22,12 @@ cyber_theme = Theme({
 })
 
 console = Console(theme=cyber_theme)
-LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "local_geek_master.jsonl")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOG_FILE = os.path.join(PROJECT_ROOT, "logs", "local_geek_master.jsonl")
 
 def print_header():
     """渲染 简约斜体版·CyberClaw 监控面板"""
     
-    # 👾 极简 10 宽像素怪兽
     monster = (
         "  ▄█▄▄█▄  \n"
         " ▀██████▀ \n"
@@ -41,7 +41,6 @@ def print_header():
     content.append(monster + "\n\n", style="color(141)")
     content.append("   What is CyberClaw doing?    \n", style="dim white italic") 
 
-    # 🌟 极简面板：宽度锁死在 42，精致紧凑
     panel = Panel(
         Align.center(content),  
         title="[bold color(141)] CyberClaw [/bold color(141)]",
@@ -52,7 +51,6 @@ def print_header():
         padding=0
     )
 
-    # 全局动态居中打印
     console.print(Align.center(panel))
     console.print()
 
