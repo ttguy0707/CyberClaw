@@ -56,7 +56,7 @@ def create_agent_app(
                 )
 
         current_summary = state.get("summary", "")
-        final_msgs, discarded_msgs = trim_context_messages(raw_messages, trigger_turns=20, keep_turns=10)
+        final_msgs, discarded_msgs = trim_context_messages(raw_messages, trigger_turns=40, keep_turns=10)
         state_updates = {}
 
         if discarded_msgs:
@@ -71,7 +71,7 @@ def create_agent_app(
                     f"任务：请仔细阅读旧对话，提取出当前的对话语境和任务进度。\n"
                     f"动作：将新进展与【现有的交接文档】进行无缝融合，输出一份最新的上下文摘要。\n"
                     f"严格警告：只记录'我们在聊什么'、'解决了什么问题'、'得出了什么结论'等。绝对不要记录用户的静态偏好(如姓名、职业、爱好等)，这部分由其他模块负责！\n"
-                    f"要求：客观、精简，不要输出任何解释性废话，直接返回最新的记忆文本。"
+                    f"要求：客观、精简，不要输出任何解释性废话，直接返回最新的记忆文本，总字数不要超过150字"
                 )
         
             # 这里可以用便宜模型
