@@ -104,7 +104,7 @@ def write_office_file(filepath: str, content: str, mode: str = "w") -> str:
                 f.write(content)
                 
         action = "覆盖/新建" if mode == "w" else "追加"
-        return f"✅ 成功以 {action} 模式写入文件：{filepath} (共 {len(content)} 字符)"
+        return f" ● 成功以 {action} 模式写入文件：{filepath} (共 {len(content)} 字符)"
     except Exception as e:
         return str(e)
     
@@ -143,9 +143,9 @@ def execute_office_shell(command: str) -> str:
             timeout=60
         )
         
-        output = f"🖥️ [当前系统: {SYS_OS}]\n"
-        output += f"🔀 执行命令: `{command}`\n"
-        output += f"🔄 退出码 (Exit Code): {result.returncode}\n"
+        output = f" ● 当前系统: {SYS_OS}\n"
+        output += f" ● 执行命令: `{command}`\n"
+        output += f" ● 退出码 (Exit Code): {result.returncode}\n"
         
         stdout = result.stdout.strip()
         stderr = result.stderr.strip()

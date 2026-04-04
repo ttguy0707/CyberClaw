@@ -61,7 +61,7 @@ def create_agent_app(
 
         if discarded_msgs:
             import sys
-            print_formatted_text(ANSI("\033[K \033[38;5;141m[ ⚙️ 正在更新上下文记忆... ]\033[0m"))
+            print_formatted_text(ANSI("\033[K \033[38;5;141m ● 正在更新上下文记忆... \033[0m"))
             discarded_text = "\n".join([f"{m.type}: {m.content}" for m in discarded_msgs if m.content])
         
             summary_prompt = (
