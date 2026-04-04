@@ -38,11 +38,10 @@ ENV_PATH = os.path.join(PROJECT_ROOT, ".env")
 def config_wizard():
     console.clear()
     console.print(Panel(
-        "👾 Welcome to [bold #8d52ff]CyberClaw[/bold #8d52ff]...\n☁️[dim] 请完成模型配置，我们将把密钥安全固化在本地。[/dim]", 
+        "👾 Welcome to [bold #8d52ff]CyberClaw[/bold #8d52ff]...\n\n☁️[dim] 请完成模型配置，我们将把密钥安全固化在本地。[/dim]", 
         title="[bold white]✦  CyberClaw Config[/bold white]", 
         border_style="#8d52ff"
     ))
-    
     provider_raw = questionary.select(
         "选择你的模型提供商 (Provider):",
         choices=["openai", "anthropic", "aliyun (openai compatible)","tencent (openai compatible)", "z.ai (openai compatible)", "other (openai compatible)", "ollama"],
