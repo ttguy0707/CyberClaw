@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import asyncio
+import shutil
 import random
 from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
@@ -10,6 +11,8 @@ from prompt_toolkit import PromptSession, print_formatted_text
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.styles import Style
+from prompt_toolkit.utils import get_cwidth  
+from prompt_toolkit.application import get_app
 
 from CyberClaw.core.agent import create_agent_app
 from CyberClaw.core.config import DB_PATH
@@ -134,10 +137,8 @@ def cprint(text="", end="\n"):
 async def async_main():
     print_banner()
 
-    # 🌟 UI 全局设置：加宽视口，更舒展大气！
-    UI_WIDTH = 100  # 🚀 从 64 加长到了 100，这是极客审美的黄金比例
+    MAX_UI_WIDTH = 80  
     DIM_PURPLE_CODE = "\033[2m\033[38;5;141m"
-    PURPLE_LINE = f"{DIM_PURPLE_CODE}{'━' * UI_WIDTH}\033[0m"
     
     from dotenv import load_dotenv
     load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
@@ -173,9 +174,16 @@ async def async_main():
 
         spinner = SpinnerState()
 
+        def get_safe_width():
+            term_width = shutil.get_terminal_size().columns
+            return max(10, min(MAX_UI_WIDTH, term_width - 1))
+
         def get_bottom_toolbar():
+            w = get_safe_width()
+            bottom_line = f"{DIM_PURPLE_CODE}{'━' * w}\033[0m"
+            
             if not spinner.is_spinning:
-                return ANSI(f"{PURPLE_LINE}\n ") 
+                return ANSI(f"{bottom_line}\n ") 
             
             elapsed = time.time() - spinner.start_time
             if spinner.is_tool_calling:
@@ -188,13 +196,13 @@ async def async_main():
             frame = spinner.frames[idx_frame]
             
             spinner_text = f" \033[38;5;51m{frame}\033[0m \033[38;5;250m{display_msg}\033[0m \033[38;5;141m[{elapsed:.1f}s]\033[0m"
-            return ANSI(f"{PURPLE_LINE}\n{spinner_text}")
+            return ANSI(f"{bottom_line}\n{spinner_text}")
 
-        prompt_message = ANSI(f"\n{PURPLE_LINE}\n \033[38;5;51m❯\033[0m  ")
+        def get_dynamic_prompt():
+            w = get_safe_width()
+            top_line = f"{DIM_PURPLE_CODE}{'━' * w}\033[0m"
+            return ANSI(f"{top_line}\n  \033[38;5;51m❯\033[0m ")
 
-        # ---------------------------------------------------------
-        # 🌟 任务 A：右脑 (消费者)
-        # ---------------------------------------------------------
         async def agent_worker():
             while True:
                 user_input = await task_queue.get()
@@ -220,30 +228,34 @@ async def async_main():
                                     for tc in last_msg.tool_calls:
                                         spinner.is_tool_calling = True
                                         spinner.tool_msg = f"唤醒内置工具 : {tc['name']}..."
-                                        cprint(f" \033[38;5;51m[ 唤醒内置工具 : {tc['name']} ]\033[0m")
+                                        cprint(f"  ●\033[38;5;51m Tool Call: \033[0m{tc['name']}")
+                                    cprint('')
                                         
                                 elif last_msg.content:
                                     spinner.is_spinning = False
-                                    cprint(f" \033[38;5;141m❯\033[0m \033[38;5;250m{last_msg.content.strip()}\033[0m")
+                                    
+                                    lines = last_msg.content.strip().split('\n')
+                                    if lines:
+                                        formatted_out = f"  \033[38;5;141m❯\033[0m \033[38;5;250m{lines[0]}"
+                                        for line in lines[1:]:
+                                            formatted_out += f"\n    {line}"
+                                        formatted_out += "\033[0m" 
+                                        cprint(formatted_out)
                                     
                             elif node_name != "agent": 
                                 spinner.is_tool_calling = False 
                                 
                 except Exception as e:
                     spinner.is_spinning = False
-                    cprint(f" \033[31m[ ⚠️ 引擎异常 : {e} ]\033[0m")
+                    cprint(f"  \033[31m[ ⚠️ 引擎异常 : {e} ]\033[0m")
 
                 spinner.is_spinning = False
                 cprint() 
                 task_queue.task_done()
 
-        # ---------------------------------------------------------
-        # 🌟 任务 B：左脑 (生产者) 
-        # ---------------------------------------------------------
         async def user_input_loop():
             custom_style = Style.from_dict({
                 'bottom-toolbar': 'bg:default fg:default noreverse',
-                '': 'bg:#1c1c1c', 
             })
             
             session = PromptSession(
@@ -255,7 +267,10 @@ async def async_main():
             async def redraw_timer():
                 while True:
                     if spinner.is_spinning:
-                        session.app.invalidate()
+                        try:
+                            get_app().invalidate()
+                        except Exception:
+                            pass
                     await asyncio.sleep(0.08)
                     
             redraw_task = asyncio.create_task(redraw_timer())
@@ -263,33 +278,33 @@ async def async_main():
             while True:
                 try:
                     with patch_stdout():
-                        user_input = await session.prompt_async(prompt_message)
+                        user_input = await session.prompt_async(get_dynamic_prompt)
 
                     user_input = user_input.strip()
                     if not user_input:
                         continue
                     
-                    # 🌟 核心改进：为气泡文字增加一条长长的空格“小尾巴”
-                    # 这样气泡就有了一个很好看的初始长度，而且由于没有使用全铺满代码，绝不会导致崩溃
-                    padded_bubble = f"❯ {user_input} "  
+                    prefix = "  ❯ "
+                    content_cols = get_cwidth(prefix) + get_cwidth(user_input)
+                    w = get_safe_width()
                     
-                    cprint(f" \033[48;2;38;38;38m\033[38;5;255m{padded_bubble}\033[0m\n")
+                    pad_len = max(2, w - content_cols)
+                    padded_bubble = f"{prefix}{user_input}" + " " * pad_len
+                    
+                    cprint(f"\033[48;2;38;38;38m\033[38;5;255m{padded_bubble}\033[0m\n")
                     
                     await task_queue.put(user_input)
                     if user_input.lower() in ["/exit", "/quit"]:
-                        cprint("\033[38;5;141m✦ 记忆已固化，CyberClaw 进入休眠。\033[0m")
+                        cprint("  \033[38;5;141m✦ 记忆已固化，CyberClaw 进入休眠。\033[0m")
                         break
                         
                 except (KeyboardInterrupt, EOFError):
-                    cprint("\n\033[38;5;141m✦ 强制中断，CyberClaw 进入休眠。\033[0m")
+                    cprint("\n  \033[38;5;141m✦ 强制中断，CyberClaw 进入休眠。\033[0m")
                     await task_queue.put("/exit")
                     break
 
             redraw_task.cancel() 
 
-        # ---------------------------------------------------------
-        # 🌟 启动！
-        # ---------------------------------------------------------
         worker = asyncio.create_task(agent_worker())
         await user_input_loop()
         await task_queue.join()
