@@ -16,6 +16,7 @@ PERSONAS_DIR = os.path.join(WORKSPACE_DIR, "personas")     # 人设区：系统 
 SCRIPTS_DIR = os.path.join(WORKSPACE_DIR, "scripts")       # 脚本区：自动化武器库
 OFFICE_DIR = os.path.join(WORKSPACE_DIR, "office")         # 沙盒工位 唯一被允许执行文件与shell操作的空间
 SKILLS_DIR = os.path.join(OFFICE_DIR, "skills")            # 技能卡槽
+TASKS_FILE = os.path.join(WORKSPACE_DIR, "tasks.json")
 
 for d in [WORKSPACE_DIR, MEMORY_DIR, PERSONAS_DIR, SCRIPTS_DIR, OFFICE_DIR, SKILLS_DIR]:
     os.makedirs(d, exist_ok=True)

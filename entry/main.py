@@ -15,6 +15,7 @@ from prompt_toolkit.application import get_app
 from cyberclaw.core.agent import create_agent_app
 from cyberclaw.core.config import DB_PATH
 from cyberclaw.core.bus import task_queue
+from cyberclaw.core.heartbeat import pacemaker_loop
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -245,9 +246,11 @@ async def async_main():
             redraw_task.cancel() 
 
         worker = asyncio.create_task(agent_worker())
+        heartbeat_worker = asyncio.create_task(pacemaker_loop(check_interval=10))
         await user_input_loop()
         await task_queue.join()
         worker.cancel()
+        heartbeat_worker.cancel()
 
 def main():
     asyncio.run(async_main())
