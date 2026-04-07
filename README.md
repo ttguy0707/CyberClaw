@@ -652,6 +652,12 @@ MIT License
 
 ---
 
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ttguy0707/CyberClaw&type=Date&theme=dark)](https://star-history.com/#ttguy0707/CyberClaw&Date)
+
+---
+
 <div align="center">
 
 **👾 CyberClaw · 下一代透明智能体架构**
