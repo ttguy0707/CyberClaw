@@ -101,9 +101,17 @@ def schedule_task(target_time: str, description: str, repeat: str = None, repeat
     5. 如果用户不明确回答，你必须坚定地回复：“抱歉，没有明确上下午，我无权为您设置闹钟。请明确告知时间段。”并立即中止工具调用。
     """
     try:
-        datetime.strptime(target_time, "%Y-%m-%d %H:%M:%S")
+        target_dt = datetime.strptime(target_time, "%Y-%m-%d %H:%M:%S")
     except ValueError:
         return "设定失败：时间格式错误，必须严格遵循 'YYYY-MM-DD HH:MM:SS' 格式。"
+    
+    now = datetime.now()
+    if target_dt <= now:
+        return (
+            "设定失败：target_time 必须晚于当前时间。"
+            f" 当前时间：{now.strftime('%Y-%m-%d %H:%M:%S')}，"
+            f" 你传入的是：{target_time}"
+        )
 
     with tasks_lock:
         tasks = []
@@ -237,7 +245,14 @@ def modify_scheduled_task(task_id: str, new_time: str = None, new_description: s
             for t in tasks:
                 if t['id'] == task_id:
                     if new_time:
-                        datetime.strptime(new_time, "%Y-%m-%d %H:%M:%S")
+                        parsed_new_time = datetime.strptime(new_time, "%Y-%m-%d %H:%M:%S")
+                        now = datetime.now()
+                        if parsed_new_time <= now:
+                            return (
+                                "修改失败：new_time 必须晚于当前时间。"
+                                f" 当前时间：{now.strftime('%Y-%m-%d %H:%M:%S')}，"
+                                f" 你传入的是：{new_time}"
+                            )
                         t['target_time'] = new_time
                     if new_description:
                         t['description'] = new_description
